@@ -2,7 +2,7 @@
 
 A lightweight **real-time screen shader** for Roblox that mimics **basic raytraced lighting, reflections, and shadows** using 2D UI frames and `Raycast` math. No plugins, no modules – just one neat LocalScript.
 
-![Demo](https://yourdomain.com/images/pixelshader_demo.gif) 
+![Demo]() 
 
 ---
 
@@ -22,6 +22,7 @@ A lightweight **real-time screen shader** for Roblox that mimics **basic raytrac
 1. Create a **LocalScript** inside:
 2. Paste in the full script from `senti_pixel_shader.lua`
 3. Hit **Play** in Roblox Studio and watch the shader draw!
+## REMEMBER TO CREATE A BLANK SCREENGUI IN STARTERGUI   ![image](https://github.com/user-attachments/assets/56d53595-20b8-4115-86a1-722c03682cd3)
 
 ---
 
