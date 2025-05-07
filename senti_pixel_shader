@@ -1,0 +1,200 @@
+local runservice = game:GetService("RunService")
+local lighting = game:GetService("Lighting")
+local camera = workspace.CurrentCamera
+local player = game.Players.LocalPlayer
+local screengui = player:WaitForChild("PlayerGui"):WaitForChild("ScreenGui")
+
+local basegridx, basegridy = 250, 100
+local pixelwidth, pixelheight = 8, 8
+local maxgridx, maxgridy = 230, 120
+local pixelgrid = {}
+local framecounter = 0
+
+local sundirection = lighting:GetSunDirection()
+local maxraydistance = 100
+local reflectionfactor = 1
+local shadowfactor = 1
+local targetfps = 30
+local dynamicadjustment = false
+
+local allowedmaterials = {
+	[Enum.Material.Glass] = true,
+	[Enum.Material.Metal] = true,
+}
+
+local rayparams = RaycastParams.new()
+rayparams.FilterDescendantsInstances = {player.Character}
+rayparams.FilterType = Enum.RaycastFilterType.Blacklist
+
+local sunvector = lighting:GetSunDirection()
+
+local function blendcolors(basecolor, shading, reflectioncolor)
+	local basevector = Vector3.new(basecolor.R, basecolor.G, basecolor.B)
+	local reflectionvector = Vector3.new(reflectioncolor.R, reflectioncolor.G, reflectioncolor.B)
+	local blendedvector = basevector * shading + reflectionvector
+	blendedvector = Vector3.new(
+		math.clamp(blendedvector.X, 0, 1),
+		math.clamp(blendedvector.Y, 0, 1),
+		math.clamp(blendedvector.Z, 0, 1)
+	)
+	return Color3.new(blendedvector.X, blendedvector.Y, blendedvector.Z)
+end
+
+local function calculateshading(surfacenormal, lightdir)
+	return math.max(surfacenormal:Dot(lightdir.Unit), 0)
+end
+
+local function calculatereflection(rayresult, cameradirection)
+	if not allowedmaterials[rayresult.Material] then
+		return Color3.new(0, 0, 0)
+	end
+	if rayresult.Material == Enum.Material.Metal then
+		reflectionfactor = 0.05
+	end
+	local normal = rayresult.Normal
+	local reflectdir = (2 * normal:Dot(-cameradirection) * normal + cameradirection).Unit
+	local reflectionray = workspace:Raycast(rayresult.Position, reflectdir * maxraydistance, rayparams)
+	if reflectionray then
+		local color = reflectionray.Instance.Color
+		local reflectionvector = Vector3.new(color.R, color.G, color.B) * reflectionfactor
+		return Color3.new(
+			math.clamp(reflectionvector.X, 0, 1),
+			math.clamp(reflectionvector.Y, 0, 1),
+			math.clamp(reflectionvector.Z, 0, 1)
+		)
+	end
+	return Color3.new(0, 0, 0)
+end
+
+local function createpixelgrid()
+	local screencenterx = camera.ViewportSize.X / 2
+	local screencentery = camera.ViewportSize.Y / 2
+	local gridwidth = basegridx * pixelwidth
+	local gridheight = basegridy * pixelheight
+	local gridoffsetx = screencenterx - gridwidth / 2.95
+	local gridoffsety = screencentery - gridheight / 2
+
+	for x = 1, basegridx do
+		pixelgrid[x] = {}
+		for y = 1, basegridy do
+			local pixel = Instance.new("Frame")
+			pixel.Size = UDim2.new(0, pixelwidth, 0, pixelheight)
+			pixel.Position = UDim2.new(0, gridoffsetx + (x - 1) * pixelwidth, 0, gridoffsety + (y - 1) * pixelheight)
+			pixel.BorderSizePixel = 0
+			pixel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+			pixel.Parent = screengui
+			pixelgrid[x][y] = pixel
+		end
+	end
+end
+
+local function blendwithtransparency(frontcolor, backcolor, transparency)
+	local blendedvector = Vector3.new(
+		(frontcolor.R * (1 - transparency) + backcolor.R * transparency),
+		(frontcolor.G * (1 - transparency) + backcolor.G * transparency),
+		(frontcolor.B * (1 - transparency) + backcolor.B * transparency)
+	)
+	return Color3.new(blendedvector.X, blendedvector.Y, blendedvector.Z)
+end
+
+local ignoredmaterials = {
+	[Enum.Material.Neon] = true,
+	[Enum.Material.ForceField] = true 
+}
+
+local function calculatelightinfluence(pointlight, hitposition)
+	local lightposition = pointlight.Parent.Position
+	local distance = (lightposition - hitposition).Magnitude
+	local attenuation = math.clamp(1 - (distance / pointlight.Range), 0, 1)
+	local brightnessfactor = pointlight.Brightness * attenuation^2 
+	local lightcolor = pointlight.Color
+	return lightcolor * brightnessfactor
+end
+
+local function getfinalcolor(rayorigin, raydirection, remainingdepth)
+	if remainingdepth <= 0 then
+		return Color3.new(0.247059, 0.345098, 0.34902)
+	end
+
+	local rayresult = workspace:Raycast(rayorigin, raydirection * maxraydistance, rayparams)
+	if rayresult then
+		local hitpart = rayresult.Instance
+		local hitcolor = hitpart.Color
+		local hitnormal = rayresult.Normal
+		local transparency = hitpart.Transparency
+
+		if ignoredmaterials[rayresult.Material] then
+			if transparency > 0 then
+				local behindcolor = getfinalcolor(rayresult.Position, raydirection, remainingdepth - 1)
+				return blendwithtransparency(hitcolor, behindcolor, transparency)
+			else
+				return hitcolor
+			end
+		end
+
+		local shading = calculateshading(hitnormal, sunvector)
+		local reflectioncolor = calculatereflection(rayresult, raydirection)
+		local currentcolor = blendcolors(hitcolor, shading, reflectioncolor)
+
+		if hitpart:IsA("BasePart") then
+			for _, child in ipairs(hitpart:GetChildren()) do
+				if child:IsA("PointLight") then
+					local lightcontribution = calculatelightinfluence(child, rayresult.Position)
+					currentcolor = blendcolors(currentcolor, 1, lightcontribution)
+				end
+			end
+		end
+
+		if transparency > 0 then
+			local behindcolor = getfinalcolor(rayresult.Position, raydirection, remainingdepth - 1)
+			return blendwithtransparency(currentcolor, behindcolor, transparency)
+		else
+			return currentcolor
+		end
+	else
+		return Color3.fromRGB(160, 197, 232)
+	end
+end
+
+local function renderframe()
+	framecounter += 1
+	sunvector = lighting:GetSunDirection()
+
+	for x = 1, basegridx do
+		for y = 1, basegridy do
+			if (x + y + framecounter) % 2 == 0 then
+				local pixel = pixelgrid[x][y]
+				local screenpoint = Vector2.new((x + 1) * pixelwidth, (y - 0.5) * pixelheight)
+				local worldray = camera:ScreenPointToRay(screenpoint.X, screenpoint.Y)
+
+				local finalcolor = getfinalcolor(worldray.Origin, worldray.Direction, 5)
+
+				if pixel then
+					pixel.BackgroundColor3 = finalcolor
+				else
+					warn("dihh")
+				end
+			end
+		end
+	end
+end
+
+local function adjustresolution(deltatime)
+	local currentfps = 1 / deltatime
+	if dynamicadjustment then
+		if currentfps < targetfps and basegridx > 50 then
+			basegridx = math.max(50, basegridx - 5)
+			basegridy = math.max(30, basegridy - 3)
+		elseif currentfps > targetfps + 5 and basegridx < maxgridx then
+			basegridx = math.min(maxgridx, basegridx + 5)
+			basegridy = math.min(maxgridy, basegridy + 3)
+		end
+	end
+end
+
+createpixelgrid()
+
+runservice.RenderStepped:Connect(function(deltatime)
+	adjustresolution(deltatime)
+	renderframe()
+end)
