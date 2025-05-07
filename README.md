@@ -6,6 +6,9 @@ A lightweight **real-time screen shader** for Roblox that mimics **basic raytrac
 
 ---
 
+![image](https://github.com/user-attachments/assets/d363c264-eb6b-4bfb-86fd-ebc1f3ae31e7)
+
+
 ##  Features
 
 -  Simulated **raycasting per pixel**
@@ -16,13 +19,14 @@ A lightweight **real-time screen shader** for Roblox that mimics **basic raytrac
 - Runs in a single **LocalScript** with UI Frames
 
 ---
+![image](https://github.com/user-attachments/assets/7bf86c37-fae5-4b8d-a7ed-2315198981f4)
 
 ## How to Use
 
 1. Create a **LocalScript** inside:
 2. Paste in the full script from `senti_pixel_shader.lua`
 3. Hit **Play** in Roblox Studio and watch the shader draw!
-## REMEMBER TO CREATE A BLANK SCREENGUI IN STARTERGUI   ![image](https://github.com/user-attachments/assets/56d53595-20b8-4115-86a1-722c03682cd3)
+## REMEMBER TO CREATE A BLANK SCREENGUI IN STARTERGUI            ![image](https://github.com/user-attachments/assets/56d53595-20b8-4115-86a1-722c03682cd3)
 
 ---
 
@@ -47,7 +51,7 @@ It's like building a raytraced render engine with colored squares!
 You can tweak these inside the script:
 
 ```lua
-local pixelSize = 8           -- Size of each square
-local resolutionX = 160       -- Horizontal pixels
-local resolutionY = 90        -- Vertical pixels
-local renderDistance = 500    -- Max raycast distance
+local pixelSize = 8           
+local resolutionX = 160       
+local resolutionY = 90       
+local renderDistance = 500   
