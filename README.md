@@ -2,7 +2,7 @@
 
 A lightweight **real-time screen shader** for Roblox that mimics **basic raytraced lighting, reflections, and shadows** using 2D UI frames and `Raycast` math. No plugins, no modules – just one neat LocalScript.
 
-![Demo]() 
+
 
 ---
 
